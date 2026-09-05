@@ -1,0 +1,7 @@
+# バージョン固定必須(run.shが起動のたびにここからinstallするため、未固定だと乗っ取られた
+# パッケージの新バージョンを引き込む)。更新時はvenvを作り直しpip list --format=freezeを書き戻す。
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+websockets==17.1
+python-dotenv==1.2.3
+httpx==0.28.1

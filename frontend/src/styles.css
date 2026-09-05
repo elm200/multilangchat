@@ -1,0 +1,503 @@
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface-alt: #eef0f4;
+    --text: #16181d;
+    --text-dim: #6b7280;
+    --border: #e3e5ea;
+    --accent: #6d5bff;
+    --accent-2: #ff5ba0;
+    --bubble-self: linear-gradient(135deg, #6d5bff, #8a6dff);
+    /* surface-altより一段濃く: システムメッセージのピル(surface-alt)と紛れず、
+       かつ自分の発言の隣でも埋もれないようにする */
+    --bubble-other: #e3e7ee;
+    --shadow: 0 8px 30px rgba(20, 20, 40, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0c10;
+      --surface: #16181f;
+      --surface-alt: #1d2029;
+      --text: #f2f3f7;
+      --text-dim: #8b8f9c;
+      --border: #262a35;
+      --bubble-other: #1f2330;
+      --shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+  body {
+    font-family: "Inter", "Hiragino Sans", "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(109, 91, 255, 0.16), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255, 91, 160, 0.14), transparent 40%),
+      var(--bg);
+    color: var(--text);
+    height: 100dvh;
+  }
+
+  /* ---- Login (full-screen overlay while not connected) ---- */
+  #login {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: 100%;
+    max-width: 380px;
+    height: fit-content;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 36px 32px;
+    text-align: center;
+  }
+  #login .logo {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+  }
+  #login h1 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  #login p {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    margin: 0 0 24px;
+  }
+  #login input,
+  #login select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 13px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #login select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%),
+      linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 20px) center, calc(100% - 15px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+  #login input:focus,
+  #login select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(109, 91, 255, 0.15);
+  }
+  #login button {
+    width: 100%;
+    margin-top: 14px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 13px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    cursor: pointer;
+    transition: transform .12s, opacity .15s;
+  }
+  #login button:hover { opacity: .92; }
+  #login button:active { transform: scale(0.97); }
+  #login input + input,
+  #login input + select,
+  #login select + input { margin-top: 10px; }
+  #login .login-error {
+    color: #e0455b;
+    font-size: 12.5px;
+    margin: 10px 0 0;
+    text-align: left;
+  }
+  /* #login p の既定下マージン24pxを専用クラスで上書きする。 */
+  #login .privacy-note {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    margin: 16px 0 0;
+    opacity: .8;
+  }
+
+  /* ---- Layout: room panel occupies the left half, chat the right half ----
+     roomPanel is kept perfectly square (width capped at the viewport height)
+     so the 1024x1024 room image always fits exactly, with no crop and no
+     letterbox margin; #app takes whatever width remains. */
+  #layout {
+    width: 100%;
+    height: 100dvh;
+    display: flex;
+  }
+
+  /* ---- Room panel ---- */
+  #roomPanel {
+    position: relative;
+    flex-shrink: 0;
+    align-self: center;
+    width: min(50vw, 100dvh);
+    aspect-ratio: 1 / 1;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  #roomView {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  #roomImage {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+  }
+  #roomOverlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+  }
+  .cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: calc(14% + 22px);
+  }
+  .cell .chara {
+    width: 33%;
+    aspect-ratio: 2 / 3;
+    background-image: url("/assets/chara-image-1.png");
+    background-size: 900% 600%;
+    background-repeat: no-repeat;
+    image-rendering: pixelated;
+    animation: bob 2s steps(1, end) infinite;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  /* .badge / .badge.lang / .flag: 在室パネルとチャット吹き出しのバッジで共有する
+     見た目(背景・角丸・旗スプライト)。コンテナの配置(絶対配置 or インライン)は
+     .cell .badges / .row .badges 側でそれぞれ指定する。 */
+  .badge {
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .badge.name {
+    min-width: 0;
+  }
+  .badge.lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px 2px 8px;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
+  .badge.lang .flag {
+    width: 20px;
+    height: 15px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background-image: url("/assets/flags.png");
+    background-size: 140px 15px;
+  }
+  .cell .badges {
+    position: absolute;
+    bottom: 4%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 92%;
+  }
+
+  /* チャット吹き出しのバッジ(原語/訳文)は、ブラウザ標準title属性の代わりに
+     自前のツールチップ(.chat-tooltip)をホバーで表示する(在室パネルの旗バッジは
+     対象外、従来どおりtitle属性のまま)。#log(overflow-y:auto)の中でCSSの
+     ::afterだけで出そうとすると、上に出せば吹き出しと重なり、下に出せば
+     (特に一番下=最新のメッセージで)#log自体の下端でクリップされて見えなくなる
+     ため、ChatLog.js側でposition:fixed・ホバー時の実座標から出す形にしている。 */
+  .row .badge.lang {
+    cursor: default;
+  }
+  .chat-tooltip {
+    position: fixed;
+    background: #faf9f8;
+    color: #1f1f1f;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 7px 11px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: normal;
+    width: max-content;
+    max-width: 220px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+    pointer-events: none;
+    z-index: 50;
+  }
+  .chat-tooltip.align-right {
+    transform: translateX(-100%);
+  }
+  .chat-tooltip.dir-up {
+    transform: translateY(-100%);
+  }
+  .chat-tooltip.align-right.dir-up {
+    transform: translate(-100%, -100%);
+  }
+  #roomEmpty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    font-size: 13px;
+    color: var(--text-dim);
+    background: var(--surface);
+    pointer-events: none;
+  }
+  /* 読み込み中は部屋の絵をそのまま透けさせ、控えめなピル表示だけ重ねる
+     (まだ在室状況を受け取っていないだけなのに「誰もいません」と誤解させないため)。 */
+  #roomLoading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  #roomLoading span {
+    font-size: 12px;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+
+  /* ---- App (chat) fills whatever width the room panel leaves ---- */
+  #app {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  #topbar .avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  #topbar .info { flex: 1; min-width: 0; }
+  #topbar .title { font-weight: 700; font-size: 15px; }
+  #topbar .status {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #topbar .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2ecc71;
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+  }
+  #topbar .dot-off {
+    background: #f5a623;
+    box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.2);
+  }
+  #leaveButton {
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  #leaveButton:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+  #leaveButton:active { transform: scale(0.96); }
+
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scrollbar-width: thin;
+  }
+  #log::-webkit-scrollbar { width: 6px; }
+  #log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .row {
+    display: flex;
+    flex-direction: column;
+    max-width: 78%;
+    animation: pop .18s ease-out;
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .row.self { align-self: flex-end; align-items: flex-end; }
+  .row.other { align-self: flex-start; align-items: flex-start; }
+
+  .meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: 0 4px 3px;
+  }
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.45;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .row.self .bubble {
+    background: var(--bubble-self);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .row.other .bubble {
+    background: var(--bubble-other);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+  .row .badges {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 3px 4px 0;
+  }
+
+  .sysrow {
+    align-self: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--surface-alt);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin: 4px 0;
+  }
+
+  #chat-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  #msg {
+    flex: 1;
+    font-family: inherit;
+    font-size: 14.5px;
+    padding: 12px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #msg:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(109, 91, 255, 0.15);
+  }
+  #chat-form button {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    font-size: 17px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .12s, opacity .15s;
+  }
+  #chat-form button:hover { opacity: .92; }
+  #chat-form button:active { transform: scale(0.92); }
+
+  [hidden] { display: none !important; }
+
+  /* Narrow or portrait-oriented screens: stack the (still square) room
+     panel above the chat, so a tall/narrow window never leaves large
+     empty margins above and below a side-by-side square panel. */
+  @media (max-width: 760px), (max-aspect-ratio: 1/1) {
+    /* 縦長スマホではroomPanel(最大60dvh)がoverflow:hiddenと合わさりchatをほぼ隠すため、
+       ページを通常スクロールにしてroomPanelを先頭セクション、appを下に続けて配置する。 */
+    html, body { height: auto; min-height: 100%; overflow-y: auto; overflow-x: hidden; }
+    #layout { flex-direction: column; height: auto; }
+    #roomPanel {
+      align-self: center;
+      width: min(100vw, 60dvh);
+      flex-shrink: 0;
+    }
+    #app { width: 100%; height: 100dvh; min-height: 0; flex-shrink: 0; }
+  }

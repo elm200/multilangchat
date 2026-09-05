@@ -1,0 +1,16 @@
+{
+  "name": "chat-room-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "npx tsc --noEmit -p tsconfig.json",
+    "build": "vite build",
+    "dev": "vite build --watch"
+  },
+  "devDependencies": {
+    "htm": "3.1.1",
+    "preact": "10.29.8",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
+  }
+}
